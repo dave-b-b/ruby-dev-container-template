@@ -1,6 +1,5 @@
 services:
   claude-dev:
-    container_name: dev_container
     build:
       context: .
       dockerfile: Dockerfile
