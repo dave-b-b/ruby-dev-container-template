@@ -1,0 +1,18 @@
+services:
+  claude-dev:
+    container_name: dev_container
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount current directory to /workspace
+      - .:/workspace
+      # Preserve gems across container restarts
+      - bundle_cache:/usr/local/bundle
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+
+volumes:
+  bundle_cache:

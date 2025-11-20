@@ -1,0 +1,35 @@
+{
+  "name": "Claude Swarm Ruby Dev Container",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "claude-dev",
+  "workspaceFolder": "/workspace",
+
+  // Configure tool-specific properties
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rebornix.ruby",
+        "castwide.solargraph",
+        "kaiwood.endwise",
+        "misogi.ruby-rubocop"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+
+  // Use 'forwardPorts' to make a list of ports inside the container available locally
+  "forwardPorts": [3000],
+
+  // Use 'postCreateCommand' to run commands after the container is created
+  "postCreateCommand": "bundle install",
+
+  // Set environment variables
+  "remoteEnv": {
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}"
+  },
+
+  // Keep container running
+  "overrideCommand": true
+}

@@ -1,0 +1,26 @@
+# Example Claude Swarm Configuration
+# Copy this to claude-swarm.yml in your Rails app and customize
+
+agents:
+  - name: developer
+    system_prompt: |
+      You are a Rails developer working on this application.
+      Focus on implementing features, fixing bugs, and writing tests.
+    tools:
+      - bash
+      - read_file
+      - write_file
+      - edit_file
+
+  - name: reviewer
+    system_prompt: |
+      You are a code reviewer focused on Rails best practices.
+      Review code for security, performance, and maintainability.
+    tools:
+      - read_file
+      - write_file
+
+# Optional: Define tasks for the swarm to work on
+tasks:
+  - "Review the current codebase structure"
+  - "Identify potential improvements"
