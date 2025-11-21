@@ -1,0 +1,79 @@
+# Development Dockerfile for Rails
+# This container provides an isolated development environment where:
+# - All development happens INSIDE the container
+# - Code changes sync bidirectionally with the host via volume mount
+# - Ruby gems are containerized and persist via named volume
+# - No Ruby/Rails installation needed on the host machine
+
+FROM ruby:3.3-slim
+
+# Install system dependencies
+RUN apt-get update -qq && \
+    apt-get install -y \
+    build-essential \
+    git \
+    curl \
+    libpq-dev \
+    libsqlite3-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    zlib1g-dev \
+    libyaml-dev \
+    libvips \
+    vim \
+    sudo \
+    pkg-config \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js (required for Claude CLI)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code CLI globally
+RUN npm install -g @anthropic-ai/claude-code
+
+# Install Bundler
+RUN gem install bundler
+
+# Create non-root user
+RUN groupadd --gid 1000 developer && \
+    useradd --uid 1000 --gid developer --shell /bin/bash --create-home developer && \
+    echo "developer ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# Set up work directory and ensure developer owns it
+WORKDIR /rails
+RUN chown developer:developer /rails
+
+# Configure bundler to install gems to /usr/local/bundle
+# This path is mounted as a named volume in docker-compose.yml
+# Gems persist between container restarts but stay isolated from host
+ENV BUNDLE_PATH=/usr/local/bundle \
+    BUNDLE_BIN=/usr/local/bundle/bin
+ENV PATH="${BUNDLE_BIN}:${PATH}"
+
+# Copy Gemfile and Gemfile.lock for initial bundle install
+# These files will be overridden by the volume mount at runtime
+COPY --chown=developer:developer Gemfile Gemfile.lock ./
+
+# Copy the development entrypoint script
+COPY --chown=developer:developer bin/docker-entrypoint-dev.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
+
+# Create bundle directory with correct ownership
+# The named volume will be mounted here, preserving permissions
+RUN mkdir -p ${BUNDLE_PATH} && \
+    chown -R developer:developer ${BUNDLE_PATH}
+
+# Switch to developer user for all operations
+USER developer
+
+# Install initial gems (will be cached in the named volume)
+RUN bundle install
+
+# Default command - starts an interactive bash shell
+# Developers can work inside the container using:
+# - docker compose run web bash (new container)
+# - docker compose exec web bash (existing container)
+CMD ["/bin/bash"]

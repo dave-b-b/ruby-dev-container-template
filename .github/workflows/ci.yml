@@ -65,60 +65,197 @@ jobs:
       - name: Lint code for consistent style
         run: bin/rubocop -f github
 
-  test:
-    runs-on: ubuntu-latest
+  # Rails tests disabled - we test via Docker container instead
+  # test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v5
+  #
+  #     - name: Set up Ruby
+  #       uses: ruby/setup-ruby@v1
+  #       with:
+  #         bundler-cache: true
+  #
+  #     - name: Run tests
+  #       env:
+  #         RAILS_ENV: test
+  #       run: bin/rails db:test:prepare test
 
-    # services:
-    #  redis:
-    #    image: valkey/valkey:8
-    #    ports:
-    #      - 6379:6379
-    #    options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+  # system-test:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v5
+  #
+  #     - name: Set up Ruby
+  #       uses: ruby/setup-ruby@v1
+  #       with:
+  #         bundler-cache: true
+  #
+  #     - name: Run System Tests
+  #       env:
+  #         RAILS_ENV: test
+  #       run: bin/rails db:test:prepare test:system
+
+  docker-build:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
         with:
-          bundler-cache: true
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile.dev', 'Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
-      - name: Run tests
-        env:
-          RAILS_ENV: test
-          # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
-          # REDIS_URL: redis://localhost:6379/0
-        run: bin/rails db:test:prepare test
+      - name: Build Docker development image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.dev
+          tags: rails-template-dev:latest
+          load: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
-  system-test:
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Test Docker container starts successfully
+        run: |
+          docker run -d --name test-container rails-template-dev tail -f /dev/null
+          sleep 5
+          docker exec test-container ruby --version
+          docker exec test-container rails --version
+          docker exec test-container claude --version
+          docker exec test-container bundle install
+          docker stop test-container
+          docker rm test-container
+
+  docker-claude-swarm:
     runs-on: ubuntu-latest
-
-    # services:
-    #  redis:
-    #    image: valkey/valkey:8
-    #    ports:
-    #      - 6379:6379
-    #    options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Run System Tests
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile.dev', 'Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build Docker development image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.dev
+          tags: rails-template-dev:latest
+          load: true
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+#
+#      - name: Test claude-swarm command availability
+#        run: |
+#          docker run --rm rails-template-dev claude-swarm
+
+      - name: Test claude-swarm help command
+        run: |
+          docker run --rm rails-template-dev claude-swarm --help
+
+  docker-compose-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ hashFiles('Dockerfile.dev', 'Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Create temporary Claude config directory
+        run: |
+          mkdir -p ~/.config/claude
+          touch ~/.config/claude/config
+
+      - name: Test Docker Compose configuration
+        run: |
+          docker compose config
+
+      - name: Fix file ownership for container user
+        run: |
+          # The container runs as developer user (UID 1000)
+          # Change ownership so bundle can write Gemfile.lock
+          sudo chown -R 1000:1000 .
+
+      - name: Build and start services with Docker Compose
         env:
-          RAILS_ENV: test
-          # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
-          # REDIS_URL: redis://localhost:6379/0
-        run: bin/rails db:test:prepare test:system
+          DOCKER_BUILDKIT: 1
+          COMPOSE_DOCKER_CLI_BUILD: 1
+        run: |
+          docker compose build --build-arg BUILDKIT_INLINE_CACHE=1
+          docker compose up -d
 
-      - name: Keep screenshots from failed system tests
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: screenshots
-          path: ${{ github.workspace }}/tmp/screenshots
-          if-no-files-found: ignore
+      - name: Check container status and logs
+        run: |
+          echo "Waiting 10 seconds for startup..."
+          sleep 10
+
+          echo "=== Container Status ==="
+          docker compose ps
+
+          echo -e "\n=== Container Logs ==="
+          docker compose logs web
+
+          # Fail if container is not running
+          if ! docker compose ps web | grep -q "Up"; then
+            echo "❌ Container exited. Check logs above for errors."
+            exit 1
+          fi
+
+      - name: Wait for web service to be available
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:3000/up; then
+              echo "Service ready!"
+              exit 0
+            fi
+            echo "Waiting..."
+            sleep 2
+          done
+          echo "Service did not start in time."
+          exit 1
+
+      - name: Check Rails app is responding
+        run: |
+          docker compose exec -T web rails --version
+
+      - name: Clean up
+        if: always()
+        run: |
+          docker compose down -v

@@ -1,0 +1,88 @@
+# Claude Swarm v1 Configuration
+# Copy this to claude-swarm.yml and customize for your project
+#
+# Documentation: https://github.com/parruda/swarm/blob/main/docs/v1/README.md
+
+version: 1
+
+swarm:
+  name: "Rails Development Swarm"
+  main: developer
+
+  instances:
+    # Primary developer instance - implements features and writes code
+    developer:
+      description: |
+        You are an experienced Rails developer working on this application.
+
+        Your responsibilities:
+        - Implement new features following Rails conventions
+        - Write clean, maintainable, idiomatic Ruby code
+        - Create comprehensive tests for new functionality
+        - Fix bugs and refactor code when needed
+        - Follow Rails and Ruby best practices
+        - Use ActiveRecord efficiently
+
+        When you need code review, delegate to the reviewer instance.
+        When you need database schema changes, consult with the dba instance.
+
+      directory: .
+      model: sonnet  # or "opus" for more complex tasks
+      connections:
+        - reviewer
+        - dba
+      allowed_tools:
+        - Read
+        - Write
+        - Edit
+        - Bash
+
+    # Code reviewer instance - reviews for quality and best practices
+    reviewer:
+      description: |
+        You are a senior Rails code reviewer focused on code quality and best practices.
+
+        Your responsibilities:
+        - Review code for security vulnerabilities (SQL injection, XSS, CSRF, mass assignment)
+        - Ensure performance optimizations (N+1 queries, eager loading, caching)
+        - Verify Rails conventions are followed
+        - Check for proper error handling and edge cases
+        - Ensure adequate test coverage
+        - Suggest improvements for code readability and maintainability
+
+        Provide constructive, specific feedback with code examples.
+        Explain the "why" behind your suggestions.
+
+      directory: .
+      model: sonnet
+      connections:
+        - developer
+      allowed_tools:
+        - Read
+        - Write
+
+    # Database administrator instance - handles schema and data
+    dba:
+      description: |
+        You are a database administrator specializing in Rails applications.
+
+        Your responsibilities:
+        - Design and review database migrations
+        - Optimize database queries and add appropriate indexes
+        - Ensure data integrity through constraints and validations
+        - Design efficient database schemas following normalization principles
+        - Identify and fix N+1 query problems
+        - Suggest query optimizations and eager loading strategies
+        - Ensure migrations are reversible and safe for production
+
+        Always consider data safety and migration rollback scenarios.
+
+      directory: .
+      model: sonnet
+      connections:
+        - developer
+        - reviewer
+      allowed_tools:
+        - Read
+        - Write
+        - Bash
