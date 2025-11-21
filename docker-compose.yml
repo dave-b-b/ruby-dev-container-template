@@ -1,0 +1,37 @@
+services:
+  rails-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      # Mount project code (read-only for extra safety if needed, remove :ro to allow writes)
+      - .:/rails
+      # Cache gems to speed up rebuilds
+      - bundle_cache:/home/developer/.gems
+      # Mount Claude CLI config for authentication
+      - ~/.config/claude:/home/developer/.config/claude:ro
+    working_dir: /rails
+    stdin_open: true
+    tty: true
+    environment:
+      # Set Rails environment
+      - RAILS_ENV=development
+    ports:
+      # Expose Rails server port
+      - "3000:3000"
+    command: /bin/bash
+    # Security: limit capabilities
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    # Security: read-only root filesystem (comment out if it causes issues)
+    # read_only: true
+    # tmpfs:
+    #   - /tmp
+    #   - /rails/tmp
+
+volumes:
+  bundle_cache:

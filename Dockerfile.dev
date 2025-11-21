@@ -1,0 +1,42 @@
+FROM ruby:3.3-slim
+
+# Install system dependencies including Node.js for Claude CLI
+RUN apt-get update -qq && \
+    apt-get install -y \
+    build-essential \
+    git \
+    curl \
+    libpq-dev \
+    libsqlite3-dev \
+    libvips \
+    nodejs \
+    npm \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up working directory
+WORKDIR /rails
+
+# Install Claude CLI globally
+RUN npm install -g @anthropic-ai/claude-code
+
+# Install bundler
+RUN gem install bundler claude_swarm
+
+# Set up non-root user for security
+RUN groupadd --gid 1000 developer && \
+    useradd --uid 1000 --gid developer --shell /bin/bash --create-home developer
+
+# Set ownership of working directory
+RUN chown -R developer:developer /rails
+
+# Switch to non-root user
+USER developer
+
+# Set environment variables for gem installation
+ENV GEM_HOME="/home/developer/.gems"
+ENV GEM_PATH="/home/developer/.gems:/usr/local/bundle"
+ENV PATH="/home/developer/.gems/bin:/usr/local/bundle/bin:/usr/local/bin:$PATH"
+
+# Default command
+CMD ["/bin/bash"]

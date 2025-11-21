@@ -49,3 +49,8 @@
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile
+/Dockerfile.dev
+/docker-compose.yml
+
+# Ignore Claude Swarm configuration (user-specific)
+/claude-swarm.yml
