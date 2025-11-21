@@ -207,6 +207,12 @@ jobs:
         run: |
           docker compose config
 
+      - name: Fix file ownership for container user
+        run: |
+          # The container runs as developer user (UID 1000)
+          # Change ownership so bundle can write Gemfile.lock
+          sudo chown -R 1000:1000 .
+
       - name: Build and start services with Docker Compose
         env:
           DOCKER_BUILDKIT: 1
