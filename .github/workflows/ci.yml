@@ -218,7 +218,7 @@ jobs:
       - name: Wait for web service to be available
         run: |
           for i in {1..30}; do
-            if curl -s http://localhost:8080/up; then
+            if curl -s http://localhost:3000/up; then
               echo "Service ready!"
               exit 0
             fi
