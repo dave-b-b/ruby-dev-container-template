@@ -214,7 +214,19 @@ jobs:
         run: |
           docker compose build --build-arg BUILDKIT_INLINE_CACHE=1
           docker compose up -d
-          sleep 10
+
+      - name: Wait for web service to be available
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:8080/up; then
+              echo "Service ready!"
+              exit 0
+            fi
+            echo "Waiting..."
+            sleep 2
+          done
+          echo "Service did not start in time."
+          exit 1
 
       - name: Check Rails app is responding
         run: |
