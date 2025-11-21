@@ -1,24 +1,30 @@
 services:
-  web:
+  # Development service - for interactive work
+  # Usage: docker compose run --rm dev
+  # This starts a bash shell for development tasks like:
+  # - Running rails commands (generate, console, db:migrate)
+  # - Installing gems (bundle add/install/update)
+  # - Running claude-swarm or other development tools
+  dev:
     build:
       context: .
       dockerfile: Dockerfile.dev
     volumes:
-      # Mount project code (read-only for extra safety if needed, remove :ro to allow writes)
+      # Mount project code - syncs code changes between container and host
       - .:/rails
-      # Cache gems to speed up rebuilds
-      - bundle_cache:/home/developer/.gems
-      # Mount Claude CLI config for authentication
+
+      # Named volume for Ruby gems - persists gems between container restarts
+      - bundle_cache:/usr/local/bundle
+
+      # Mount Claude CLI config for authentication (read-only)
       - ~/.config/claude:/home/developer/.config/claude:ro
     working_dir: /rails
     stdin_open: true
     tty: true
     environment:
-      # Set Rails environment
+      # Rails environment
       - RAILS_ENV=development
-    ports:
-      # Expose Rails server port
-      - "3000:3000"
+    # Start bash shell for interactive development
     command: /bin/bash
     # Security: limit capabilities
     cap_drop:
@@ -27,11 +33,48 @@ services:
       - CHOWN
       - SETGID
       - SETUID
-    # Security: read-only root filesystem (comment out if it causes issues)
-    # read_only: true
-    # tmpfs:
-    #   - /tmp
-    #   - /rails/tmp
+      - DAC_OVERRIDE
 
+  # Web service - for running the Rails application
+  # Usage: docker compose up [web]
+  # This automatically starts the Rails server at http://localhost:3000
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      # Mount project code - syncs code changes between container and host
+      - .:/rails
+
+      # Named volume for Ruby gems - persists gems between container restarts
+      - bundle_cache:/usr/local/bundle
+
+      # Mount Claude CLI config for authentication (read-only)
+      - ~/.config/claude:/home/developer/.config/claude:ro
+    working_dir: /rails
+    stdin_open: true
+    tty: true
+    environment:
+      # Rails environment
+      - RAILS_ENV=development
+    ports:
+      # Expose Rails server port
+      - "3000:3000"
+    # Use the development entrypoint that handles setup and starts Rails
+    entrypoint: ["/rails/bin/docker-entrypoint-dev.sh"]
+    # Security: limit capabilities
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+
+# Define named volumes
 volumes:
+  # This volume stores Ruby gems installed via bundler
+  # It persists between container restarts but remains isolated from the host
+  # To clear the gem cache, run: docker compose down -v
   bundle_cache:
+    driver: local
