@@ -1,5 +1,5 @@
 services:
-  rails-dev:
+  web:
     build:
       context: .
       dockerfile: Dockerfile.dev
