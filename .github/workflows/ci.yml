@@ -215,6 +215,23 @@ jobs:
           docker compose build --build-arg BUILDKIT_INLINE_CACHE=1
           docker compose up -d
 
+      - name: Check container status and logs
+        run: |
+          echo "Waiting 10 seconds for startup..."
+          sleep 10
+
+          echo "=== Container Status ==="
+          docker compose ps
+
+          echo -e "\n=== Container Logs ==="
+          docker compose logs web
+
+          # Fail if container is not running
+          if ! docker compose ps web | grep -q "Up"; then
+            echo "❌ Container exited. Check logs above for errors."
+            exit 1
+          fi
+
       - name: Wait for web service to be available
         run: |
           for i in {1..30}; do
