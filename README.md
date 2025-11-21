@@ -48,7 +48,6 @@ Inside the container:
 ```bash
 # Set up the app
 bundle install
-rails db:create db:migrate
 
 # Generate your swarm configuration
 # IMPORTANT: The included claude-swarm.yml is for template maintenance only
@@ -63,7 +62,7 @@ claude-swarm -p "Add a User model with email and password authentication"
 In another terminal:
 
 ```bash
-docker compose up web
+docker compose profile "" up -d
 ```
 
 Visit http://localhost:3000

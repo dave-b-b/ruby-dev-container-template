@@ -9,6 +9,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    profiles: ["dev"]
     volumes:
       # Mount project code - syncs code changes between container and host
       - .:/rails
