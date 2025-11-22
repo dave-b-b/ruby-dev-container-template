@@ -46,11 +46,10 @@ RUN groupadd --gid 1000 developer && \
 WORKDIR /rails
 RUN chown developer:developer /rails
 
-# Configure bundler to install gems to /usr/local/bundle
-# This path is mounted as a named volume in docker-compose.yml
-# Gems persist between container restarts but stay isolated from host
-ENV BUNDLE_PATH=/usr/local/bundle \
-    BUNDLE_BIN=/usr/local/bundle/bin
+# Configure bundler to install gems to vendor/bundle inside the project
+# This avoids permission issues since /rails is owned by developer
+ENV BUNDLE_PATH=/rails/vendor/bundle \
+    BUNDLE_BIN=/rails/vendor/bundle/bin
 ENV PATH="${BUNDLE_BIN}:${PATH}"
 
 # Copy Gemfile and Gemfile.lock for initial bundle install
@@ -61,15 +60,10 @@ COPY --chown=developer:developer Gemfile Gemfile.lock ./
 COPY --chown=developer:developer bin/docker-entrypoint-dev.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
 
-# Create bundle directory with correct ownership
-# The named volume will be mounted here, preserving permissions
-RUN mkdir -p ${BUNDLE_PATH} && \
-    chown -R developer:developer ${BUNDLE_PATH}
-
 # Switch to developer user for all operations
 USER developer
 
-# Install initial gems (will be cached in the named volume)
+# Install initial gems (will be stored in vendor/bundle when container runs)
 RUN bundle install
 
 # Default command - starts an interactive bash shell
