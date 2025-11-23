@@ -13,9 +13,6 @@ services:
     volumes:
       # Mount project code - syncs code changes between container and host
       - .:/rails
-
-      # Mount Claude CLI config for authentication (read-only)
-      - ~/.config/claude:/home/developer/.config/claude:ro
     working_dir: /rails
     stdin_open: true
     tty: true
@@ -46,9 +43,6 @@ services:
 
       # Named volume for Ruby gems - persists gems between container restarts
       - bundle_cache:/usr/local/bundle
-
-      # Mount Claude CLI config for authentication (read-only)
-      - ~/.config/claude:/home/developer/.config/claude:ro
     working_dir: /rails
     stdin_open: true
     tty: true

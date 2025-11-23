@@ -63,6 +63,11 @@ RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
 # Switch to developer user for all operations
 USER developer
 
+# Configure Claude CLI to disable auto-update by default
+# Create the config directory and set auto-update to false manually
+RUN mkdir -p /home/developer/.config/claude && \
+    echo '{"autoUpdate":false}' > /home/developer/.config/claude/config.json
+
 # Install initial gems (will be stored in vendor/bundle when container runs)
 RUN bundle install
 
