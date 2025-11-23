@@ -33,7 +33,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
 
 # Install Claude Code CLI globally
 RUN npm install -g @anthropic-ai/claude-code
-RUN claude config set auto-update false
 
 # Install Bundler
 RUN gem install bundler
@@ -63,6 +62,11 @@ RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
 
 # Switch to developer user for all operations
 USER developer
+
+# Configure Claude CLI to disable auto-update by default
+# Create the config directory and set auto-update to false manually
+RUN mkdir -p /home/developer/.config/claude && \
+    echo '{"autoUpdate":false}' > /home/developer/.config/claude/config.json
 
 # Install initial gems (will be stored in vendor/bundle when container runs)
 RUN bundle install
