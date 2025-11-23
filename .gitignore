@@ -39,3 +39,4 @@
 # Ignore kamal secrets file (may contain sensitive commands)
 /.kamal/secrets
 
+.idea/**
