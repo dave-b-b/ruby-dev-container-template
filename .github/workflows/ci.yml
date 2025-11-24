@@ -116,7 +116,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Build Docker development image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.dev
@@ -159,7 +159,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Build Docker development image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.dev
